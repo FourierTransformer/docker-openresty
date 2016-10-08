@@ -40,11 +40,13 @@ ARG RESTY_CONFIG_OPTIONS="\
     --with-stream \
     --with-stream_ssl_module \
     --with-threads \
+    --add-module=spnego-http-auth-nginx-module \
     "
+
+ARG SPNEGO_HTTP_AUTH_VERSION="1.1.0"
 
 # These are not intended to be user-specified
 ARG _RESTY_CONFIG_DEPS="--with-openssl=/tmp/openssl-${RESTY_OPENSSL_VERSION} --with-pcre=/tmp/pcre-${RESTY_PCRE_VERSION}"
-
 
 # 1) Install yum dependencies
 # 2) Download and untar OpenSSL, PCRE, and OpenResty
@@ -57,6 +59,7 @@ RUN \
         gcc-c++ \
         gd-devel \
         GeoIP-devel \
+        krb5-devel \
         libxslt-devel \
         make \
         perl \
@@ -72,6 +75,9 @@ RUN \
     && curl -fSL https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz -o openresty-${RESTY_VERSION}.tar.gz \
     && tar xzf openresty-${RESTY_VERSION}.tar.gz \
     && cd /tmp/openresty-${RESTY_VERSION} \
+    && curl -fSL https://github.com/stnoonan/spnego-http-auth-nginx-module/archive/v${SPNEGO_HTTP_AUTH_VERSION}.tar.gz -o spnego-http-auth-nginx-module-${SPNEGO_HTTP_AUTH_VERSION}.tar.gz \
+    && tar xzf spnego-http-auth-nginx-module-${SPNEGO_HTTP_AUTH_VERSION}.tar.gz \
+    && mv spnego-http-auth-nginx-module-${SPNEGO_HTTP_AUTH_VERSION} spnego-http-auth-nginx-module \
     && ./configure -j${RESTY_J} ${_RESTY_CONFIG_DEPS} ${RESTY_CONFIG_OPTIONS} \
     && make -j${RESTY_J} \
     && make -j${RESTY_J} install \
