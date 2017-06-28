@@ -62,6 +62,7 @@ RUN \
         curl \
         gd-dev \
         geoip-dev \
+        krb5-dev \
         libxslt-dev \
         perl-dev \
         readline-dev \
