@@ -45,6 +45,7 @@ ARG RESTY_CONFIG_OPTIONS="\
     --with-stream \
     --with-stream_ssl_module \
     --with-threads \
+    --add-module=spnego-http-auth-nginx-module \
     "
 
 # These are not intended to be user-specified
