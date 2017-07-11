@@ -72,6 +72,7 @@ RUN \
         curl \
         gd \
         geoip \
+        krb5-libs \
         libgcc \
         libxslt \
         linux-headers \
