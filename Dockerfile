@@ -9,11 +9,11 @@ FROM alpine:latest
 MAINTAINER Evan Wies <evan@neomantra.net>
 
 # Docker Build Arguments
-ARG RESTY_VERSION="1.11.2.4"
-ARG RESTY_LUAROCKS_VERSION="2.4.2"
+ARG RESTY_VERSION="1.11.2.5"
+ARG RESTY_LUAROCKS_VERSION="2.4.3"
 ARG RESTY_OPENSSL_VERSION="1.0.2k"
 ARG RESTY_LUA_CJSON="2.1.0.5"
-ARG RESTY_PCRE_VERSION="8.39"
+ARG RESTY_PCRE_VERSION="8.40"
 ARG RESTY_J="4"
 ARG SPNEGO_HTTP_AUTH_VERSION="1.1.0"
 ARG RESTY_CONFIG_OPTIONS="\
@@ -47,6 +47,7 @@ ARG RESTY_CONFIG_OPTIONS="\
     --with-threads \
     --add-module=spnego-http-auth-nginx-module \
     "
+ARG RESTY_CONFIG_OPTIONS_MORE=""
 
 # These are not intended to be user-specified
 ARG _RESTY_CONFIG_DEPS="--with-openssl=/tmp/openssl-${RESTY_OPENSSL_VERSION} --with-pcre=/tmp/pcre-${RESTY_PCRE_VERSION}"
@@ -57,8 +58,7 @@ ARG _RESTY_CONFIG_DEPS="--with-openssl=/tmp/openssl-${RESTY_OPENSSL_VERSION} --w
 # 3) Build OpenResty
 # 4) Cleanup
 
-RUN \
-    apk add --no-cache --virtual .build-deps \
+RUN apk add --no-cache --virtual .build-deps \
         curl \
         gd-dev \
         geoip-dev \
@@ -91,7 +91,7 @@ RUN \
     && curl -fSL https://github.com/stnoonan/spnego-http-auth-nginx-module/archive/v${SPNEGO_HTTP_AUTH_VERSION}.tar.gz -o spnego-http-auth-nginx-module-${SPNEGO_HTTP_AUTH_VERSION}.tar.gz \
     && tar xzf spnego-http-auth-nginx-module-${SPNEGO_HTTP_AUTH_VERSION}.tar.gz \
     && mv spnego-http-auth-nginx-module-${SPNEGO_HTTP_AUTH_VERSION} spnego-http-auth-nginx-module \
-    && ./configure -j${RESTY_J} ${_RESTY_CONFIG_DEPS} ${RESTY_CONFIG_OPTIONS} \
+    && ./configure -j${RESTY_J} ${_RESTY_CONFIG_DEPS} ${RESTY_CONFIG_OPTIONS} ${RESTY_CONFIG_OPTIONS_MORE} \
     && make -j${RESTY_J} \
     && make -j${RESTY_J} install \
     && cd /tmp \
@@ -101,7 +101,7 @@ RUN \
     && ./configure \
         --prefix=/usr/local/openresty/luajit \
         --with-lua=/usr/local/openresty/luajit \
-        --lua-suffix=jit-2.1.0-beta2 \
+        --lua-suffix=jit-2.1.0-beta3 \
         --with-lua-include=/usr/local/openresty/luajit/include/luajit-2.1 \
     && make build \
     && make install \
@@ -114,12 +114,23 @@ RUN \
         openresty-${RESTY_VERSION}.tar.gz openresty-${RESTY_VERSION} \
         pcre-${RESTY_PCRE_VERSION}.tar.gz pcre-${RESTY_PCRE_VERSION} \
     && rm -rf luarocks-${RESTY_LUAROCKS_VERSION} luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz \
-    && apk del .build-deps \
+    && apk add --no-cache --virtual .gettext gettext \
+    && mv /usr/bin/envsubst /tmp/ \
+    && runDeps="$( \
+        scanelf --needed --nobanner /tmp/envsubst \
+            | awk '{ gsub(/,/, "\nso:", $2); print "so:" $2 }' \
+            | sort -u \
+            | xargs -r apk info --installed \
+            | sort -u \
+    )" \
+    && apk add --no-cache --virtual $runDeps \
+    && apk del .build-deps .gettext \
+    && mv /tmp/envsubst /usr/local/bin/ \
     && ln -sf /dev/stdout /usr/local/openresty/nginx/logs/access.log \
     && ln -sf /dev/stderr /usr/local/openresty/nginx/logs/error.log
 
 # Add additional binaries into PATH for convenience
 ENV PATH=$PATH:/usr/local/openresty/luajit/bin/:/usr/local/openresty/nginx/sbin/:/usr/local/openresty/bin/
 
-ENTRYPOINT ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
+CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
 
